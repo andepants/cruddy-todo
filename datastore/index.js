@@ -1,19 +1,24 @@
 const fs = require('fs');
 const path = require('path');
 const _ = require('underscore');
-const counter = require('./counter');
+const {getNextUniqueId} = require('./counter');
 
 var items = {};
 
 // Public API - Fix these CRUD functions ///////////////////////////////////////
 
 exports.create = (text, callback) => {
-  var id = counter.getNextUniqueId();
-  items[id] = text;
-  callback(null, { id, text });
+  getNextUniqueId((err, id) => {
+    fs.writeFile(`/${exports.dataDir}/${id}.txt`, text, () => {
+      callback(null, {id, text});
+    });
+  });
 };
 
 exports.readAll = (callback) => {
+  //get file names from data -
+
+  //iterate through data to make an array of objects
   var data = _.map(items, (text, id) => {
     return { id, text };
   });
