@@ -3,59 +3,70 @@ const path = require('path');
 const _ = require('underscore');
 const {getNextUniqueId} = require('./counter');
 
-var items = {};
-
-// Public API - Fix these CRUD functions ///////////////////////////////////////
+const getFilePath = (id) => {
+  return `/${exports.dataDir}/${id}.txt`;
+};
 
 exports.create = (text, callback) => {
   getNextUniqueId((err, id) => {
-    fs.writeFile(`/${exports.dataDir}/${id}.txt`, text, () => {
+    fs.writeFile(getFilePath(id), text, () => {
       callback(null, {id, text});
     });
   });
 };
 
 exports.readAll = (callback) => {
-  //get file names from data -
-
-  //iterate through data to make an array of objects
-  var data = _.map(items, (text, id) => {
-    return { id, text };
-  });
-  callback(null, data);
+  new Promise((res, rej) => {
+    fs.readdir(exports.dataDir, (err, data) => {
+      err ? rej(err) : res(data);
+    });
+  })
+    .catch((err) => {
+      console.log('Caught an error!');
+    })
+    .then((data) => {
+      return data.map((fileName) => {
+        const text = fs.readFileSync(`/${exports.dataDir}/${fileName}`, 'utf8');
+        const id = fileName.slice(0, -4);
+        return {id, text};
+      });
+    })
+    .then((result) => {
+      callback(null, result);
+    });
 };
 
 exports.readOne = (id, callback) => {
-  var text = items[id];
-  if (!text) {
-    callback(new Error(`No item with id: ${id}`));
-  } else {
-    callback(null, { id, text });
-  }
+  fs.readFile(getFilePath(id), (err, data) => {
+    if (err) {
+      callback(new Error(`No item with id: ${id}`));
+    } else {
+      callback(null, { id, text: data.toString()});
+    }
+  });
 };
 
 exports.update = (id, text, callback) => {
-  var item = items[id];
-  if (!item) {
-    callback(new Error(`No item with id: ${id}`));
-  } else {
-    items[id] = text;
-    callback(null, { id, text });
-  }
+  fs.readFile(getFilePath(id), (err) => {
+    if (err) {
+      callback(new Error(`No item with id: ${id}`));
+    } else {
+      fs.writeFile(getFilePath(id), text, () => {
+        callback(null, {id, text});
+      });
+    }
+  });
 };
 
 exports.delete = (id, callback) => {
-  var item = items[id];
-  delete items[id];
-  if (!item) {
-    // report an error if item not found
-    callback(new Error(`No item with id: ${id}`));
-  } else {
-    callback();
-  }
+  fs.unlink(getFilePath(id), (err) => {
+    if (err) {
+      callback(new Error(`No item with id: ${id}`));
+    } else {
+      callback();
+    }
+  });
 };
-
-// Config+Initialization code -- DO NOT MODIFY /////////////////////////////////
 
 exports.dataDir = path.join(__dirname, 'data');
 
