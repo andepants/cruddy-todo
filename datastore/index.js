@@ -1,6 +1,5 @@
-const fs = require('fs');
+const {readdir, writeFile, readFileSync, readFile, existsSync, mkdirSync, unlink} = require('fs');
 const path = require('path');
-const _ = require('underscore');
 const {getNextUniqueId} = require('./counter');
 
 const getFilePath = (id) => {
@@ -9,16 +8,16 @@ const getFilePath = (id) => {
 
 exports.create = (text, callback) => {
   getNextUniqueId((err, id) => {
-    fs.writeFile(getFilePath(id), text, () => {
+    writeFile(getFilePath(id), text, () => {
       callback(null, {id, text});
     });
   });
 };
 
 exports.readAll = (callback) => {
-  new Promise((res, rej) => {
-    fs.readdir(exports.dataDir, (err, data) => {
-      err ? rej(err) : res(data);
+  new Promise((resolve, reject) => {
+    readdir(exports.dataDir, (err, data) => {
+      err ? reject(err) : resolve(data);
     });
   })
     .catch((err) => {
@@ -26,7 +25,7 @@ exports.readAll = (callback) => {
     })
     .then((data) => {
       return data.map((fileName) => {
-        const text = fs.readFileSync(`/${exports.dataDir}/${fileName}`, 'utf8');
+        const text = readFileSync(`/${exports.dataDir}/${fileName}`, 'utf8');
         const id = fileName.slice(0, -4);
         return {id, text};
       });
@@ -37,7 +36,7 @@ exports.readAll = (callback) => {
 };
 
 exports.readOne = (id, callback) => {
-  fs.readFile(getFilePath(id), (err, data) => {
+  readFile(getFilePath(id), (err, data) => {
     if (err) {
       callback(new Error(`No item with id: ${id}`));
     } else {
@@ -47,11 +46,11 @@ exports.readOne = (id, callback) => {
 };
 
 exports.update = (id, text, callback) => {
-  fs.readFile(getFilePath(id), (err) => {
+  readFile(getFilePath(id), (err) => {
     if (err) {
       callback(new Error(`No item with id: ${id}`));
     } else {
-      fs.writeFile(getFilePath(id), text, () => {
+      writeFile(getFilePath(id), text, () => {
         callback(null, {id, text});
       });
     }
@@ -59,7 +58,7 @@ exports.update = (id, text, callback) => {
 };
 
 exports.delete = (id, callback) => {
-  fs.unlink(getFilePath(id), (err) => {
+  unlink(getFilePath(id), (err) => {
     if (err) {
       callback(new Error(`No item with id: ${id}`));
     } else {
@@ -71,7 +70,7 @@ exports.delete = (id, callback) => {
 exports.dataDir = path.join(__dirname, 'data');
 
 exports.initialize = () => {
-  if (!fs.existsSync(exports.dataDir)) {
-    fs.mkdirSync(exports.dataDir);
+  if (!existsSync(exports.dataDir)) {
+    mkdirSync(exports.dataDir);
   }
 };
